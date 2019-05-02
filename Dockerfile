@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   liblapack-dev \
   libopenblas-dev \
   libssl-dev \
+  make \
   xz-utils \
   && update-alternatives --install "/usr/bin/ld" "ld" "/usr/bin/ld.gold" 20 \
   && update-alternatives --install "/usr/bin/ld" "ld" "/usr/bin/ld.bfd" 10
@@ -38,8 +39,11 @@ ENV \
   LD_LIBRARY_PATH=/dlang/${DLANG_VERSION}/linux/lib64:/dlang/${DLANG_VERSION}/lib \
   LIBRARY_PATH=/dlang/${DLANG_VERSION}/linux/lib64:/dlang/${DLANG_VERSION}/lib
 
-RUN mkdir -p /dlang/har
-COPY har/har /dlang/har/har
+COPY ./har/ /dlang/har/build
+RUN rm -f /dlang/har/build/har \
+  && make -C /dlang/har/build har \
+  && cp /dlang/har/build/har /dlang/har/har \
+  && rm -rf /dlang/har/build
 
 RUN useradd -d /sandbox d-user
 
