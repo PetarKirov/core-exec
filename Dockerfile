@@ -1,9 +1,10 @@
-FROM ubuntu:17.10
+FROM ubuntu:19.04
 
 MAINTAINER "DLang Tour Community <tour@dlang.io>"
 
 RUN apt-get update && apt-get install --no-install-recommends -y \
   ca-certificates \
+  clang-8 libclang-8-dev \
   curl \
   gcc \
   jq \
@@ -13,7 +14,6 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   libopenblas-dev \
   libssl-dev \
   xz-utils \
-  libclang-3.9-dev clang \
   && update-alternatives --install "/usr/bin/ld" "ld" "/usr/bin/ld.gold" 20 \
   && update-alternatives --install "/usr/bin/ld" "ld" "/usr/bin/ld.bfd" 10
 
