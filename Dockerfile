@@ -23,7 +23,7 @@ ARG DLANG_EXEC=dmd
 ENV DLANG_VERSION=$DLANG_VERSION
 ENV DLANG_EXEC=$DLANG_EXEC
 
-RUN curl -fsS -o /tmp/install.sh https://dlang.org/install.sh \
+RUN curl -fsSL -o /tmp/install.sh https://dlang.org/install.sh \
   && bash /tmp/install.sh -p /dlang install ${DLANG_VERSION} \
   && rm -f /dlang/d-keyring.gpg \
   && rm -rf /dlang/dub* \
