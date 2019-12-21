@@ -4,7 +4,7 @@ MAINTAINER "DLang Tour Community <tour@dlang.io>"
 
 RUN apt-get update && apt-get install --no-install-recommends -y \
   ca-certificates \
-  clang-8 libclang-8-dev \
+  libclang-6.0-dev \
   curl \
   gcc \
   jq \
@@ -23,18 +23,17 @@ ARG DLANG_EXEC=dmd
 ENV DLANG_VERSION=$DLANG_VERSION
 ENV DLANG_EXEC=$DLANG_EXEC
 
-RUN curl -fsSL -o /tmp/install.sh https://dlang.org/install.sh \
-  && bash /tmp/install.sh -p /dlang install ${DLANG_VERSION} \
-  && rm -f /dlang/d-keyring.gpg \
-  && rm -rf /dlang/dub* \
-  && ln -s /dlang/$(ls -tr /dlang | tail -n1) /dlang/${DLANG_VERSION} \
-  && rm /tmp/install.sh \
-  && rm /dlang/install.sh \
-  && apt-get auto-remove -y xz-utils \
-  && rm -rf /var/cache/apt \
-  && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
-  && find /dlang \( -type d -and \! -type l -and -path "*/bin32" -or -path "*/lib32" -or -path "*/html" \) | xargs rm -rf \
-  && chmod 555 -R /dlang
+RUN curl -fsSL https://dlang.org/install.sh \
+   | bash -s -- -p /dlang install ${DLANG_VERSION}
+# && rm -f /dlang/d-keyring.gpg \
+# && rm -rf /dlang/dub* \
+# && ln -s /dlang/$(ls -tr /dlang | tail -n1) /dlang/${DLANG_VERSION} \
+# && rm /dlang/install.sh \
+# && apt-get auto-remove -y xz-utils \
+# && rm -rf /var/cache/apt \
+# && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
+# && find /dlang \( -type d -and \! -type l -and -path "*/bin32" -or -path "*/lib32" -or -path "*/html" \) | xargs rm -rf \
+# && chmod 555 -R /dlang
 
 ENV \
   PATH=/dlang/${DLANG_VERSION}/linux/bin64:/dlang/dub:/dlang/${DLANG_VERSION}/bin:/dlang/har:${PATH} \
@@ -53,7 +52,7 @@ RUN mkdir /sandbox && chown d-user:nogroup /sandbox
 USER d-user
 
 RUN cd /sandbox && \
-  for package_name in \
+  for package_version in \
     mir-algorithm \
     mir-random \
     mir \
@@ -69,25 +68,23 @@ RUN cd /sandbox && \
     pegged \
     sumtype \
     optional \
-    ; do \
-      package="$(echo $package_name | cut -d: -f1)"; \
-      version="$(echo $package_name | grep : |cut -d: -f2)"; \
-      version="${version:-*}"; \
-      printf "/++dub.sdl: name\"foo\"\ndependency\"${package}\" version=\"${version}\"+/\n void main() {}" > foo.d; \
+    ; do IFS=","; set -- $package_version; \
+      package="$1"; \
+      version="${2:-*}"; \
       dub fetch "${package}" --version="${version}"; \
+      printf "/++dub.sdl: name\"foo\"\ndependency\"${package}\" version=\"${version}\"+/\n void main() {}" > foo.d; \
       dub build --single -v --compiler=${DLANG_EXEC} foo.d; \
       version=$(dub describe ${package} | jq '.packages[0].version') ; \
       echo "${package}:${version}" >> packages; \
       rm -f foo*; \
       rm -rf .dub/build; \
-      dub fetch dpp && dub build -v --compiler=${DLANG_EXEC} dpp; \
-  done
+  done \
+  && dub fetch dpp \
+  && dub build -v --compiler=${DLANG_EXEC} dpp
 
 USER root
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh; \
-  mv /sandbox/packages /installed_packages; \
-  chmod 555 /installed_packages
-USER d-user
+RUN mv /sandbox/packages /installed_packages \
+  && chmod 555 /installed_packages
 
 ENTRYPOINT [ "/entrypoint.sh" ]
